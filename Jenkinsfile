@@ -6,6 +6,7 @@ pipeline {
      stages {
           stage("Compile") {
                steps {
+                    sh "echo feature one"
                     sh "chmod +x gradlew"
                     sh "./gradlew compileJava"
                }
