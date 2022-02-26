@@ -16,8 +16,11 @@ pipeline {
           }
           stage("Code coverage") {
                steps {
-                    sh "./gradlew jacocoTestReport"
-                    sh "./gradlew jacocoTestCoverageVerification"
+                    if (env.BRANCH_NAME == "main") {
+                      echo "My CC branch is: ${env.BRANCH_NAME}"
+                      sh "./gradlew jacocoTestReport"
+                      sh "./gradlew jacocoTestCoverageVerification"
+                    }
                }
           }
           stage("Static code analysis") {
