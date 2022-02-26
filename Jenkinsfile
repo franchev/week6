@@ -6,6 +6,7 @@ pipeline {
      stages {
           stage("Compile") {
                steps {
+                    sh "chmod +x gradlew"
                     sh "./gradlew compileJava"
                }
           }
@@ -16,13 +17,13 @@ pipeline {
           }
           stage("Code coverage") {
                steps {
-                    if (env.BRANCH_NAME == "main") {
-                      echo "test from Francesca"
-                      echo "this step will only work for the main branch"
-                      echo "My CC branch is: ${env.BRANCH_NAME}"
-                      sh "./gradlew jacocoTestReport"
-                      sh "./gradlew jacocoTestCoverageVerification"
-                    }
+                   script {
+                     if (env.BRANCH_NAME == "main") {
+                       sh "echo My CC branch is: ${env.BRANCH_NAME}"
+                       sh "./gradlew jacocoTestReport"
+                       sh "./gradlew jacocoTestCoverageVerification"
+                     }
+                   }
                }
           }
           stage("Static code analysis") {
@@ -36,60 +37,5 @@ pipeline {
                }
           }
 
-          stage("Docker build") {
-               steps {
-                    sh "docker build -t leszko/calculator:${BUILD_TIMESTAMP} ."
-               }
-          }
-
-          stage("Docker login") {
-               steps {
-                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker-hub-credentials',
-                               usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
-                         sh "docker login --username $USERNAME --password $PASSWORD"
-                    }
-               }
-          }
-
-          stage("Docker push") {
-               steps {
-                    sh "docker push leszko/calculator:${BUILD_TIMESTAMP}"
-               }
-          }
-
-          stage("Update version") {
-               steps {
-                    sh "sed  -i 's/{{VERSION}}/${BUILD_TIMESTAMP}/g' calculator.yaml"
-               }
-          }
-          
-          stage("Deploy to staging") {
-               steps {
-                    sh "kubectl config use-context staging"
-                    sh "kubectl apply -f hazelcast.yaml"
-                    sh "kubectl apply -f calculator.yaml"
-               }
-          }
-
-          stage("Acceptance test") {
-               steps {
-                    sleep 60
-                    sh "chmod +x acceptance-test.sh && ./acceptance-test.sh"
-               }
-          }
-
-          stage("Release") {
-               steps {
-                    sh "kubectl config use-context production"
-                    sh "kubectl apply -f hazelcast.yaml"
-                    sh "kubectl apply -f calculator.yaml"
-               }
-          }
-          stage("Smoke test") {
-              steps {
-                  sleep 60
-                  sh "chmod +x smoke-test.sh && ./smoke-test.sh"
-              }
-          }
      }
 }
