@@ -15,12 +15,14 @@ pipeline {
                }
           }
           stage("Code coverage") {
-             if (env.BRANCH_NAME == "main") {
                steps {
-                      sh "echo My CC branch is: ${env.BRANCH_NAME}"
-                      sh "./gradlew jacocoTestReport"
-                      sh "./gradlew jacocoTestCoverageVerification"
-                    }
+                   script {
+                     if (env.BRANCH_NAME == "main") {
+                       sh "echo My CC branch is: ${env.BRANCH_NAME}"
+                       sh "./gradlew jacocoTestReport"
+                       sh "./gradlew jacocoTestCoverageVerification"
+                     }
+                   }
                }
           }
           stage("Static code analysis") {
