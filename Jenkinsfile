@@ -39,11 +39,14 @@ podTemplate(yaml: '''
     stage('Build a gradle project') {
       container('gradle') {
 	    stage("Compile") {
-                sh "echo this is the feature branch"
-                sh "ls -l"
-				sh "git clone git@github.com:franchev/week6.git"
-	            sh "chmod +x gradlew"
-                sh "./gradlew compileJava"
+		        sh """
+                  echo this is the feature branch
+                  ls -l
+				  git clone https://github.com/franchev/week6.git
+				  cd week6
+	              chmod +x gradlew
+                  ./gradlew compileJava
+				"""
           }
           stage("Unit test") {
 		       when {
