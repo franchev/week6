@@ -38,13 +38,36 @@ podTemplate(yaml: '''
   node(POD_LABEL) {
     stage('Build a gradle project') {
       container('gradle') {
+	    stage("Compile") {
+               steps {
+                    sh "chmod +x gradlew"
+                    sh "./gradlew compileJava"
+               }
+          }
+          stage("Unit test") {
+               steps {
+                    sh "./gradlew test"
+               }
+          }
+          stage("Code coverage") {
+               steps {
+                    sh "./gradlew jacocoTestReport"
+                    sh "./gradlew jacocoTestCoverageVerification"
+               }
+          }
+          stage("Static code analysis") {
+               steps {
+                    sh "./gradlew checkstyleMain"
+               }
+          }
+          stage("Package") {
+               steps {
+                    sh "./gradlew build"
+               }
+          }
         stage('Build a gradle project') {
           sh '''
-          git clone https://github.com/dlambrig/Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition.git
-          sed -i '4 a /** Main app */' Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition/Chapter08/sample1/src/main/java/com/leszko/calculator/Calculator.java
-          cd Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition/Chapter08/sample1
-          ls -l
-          chmod +x gradlew
+          sed -i '4 a /** Main app */' src/main/java/com/leszko/calculator/Calculator.java
           ./gradlew build
           mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
           '''
