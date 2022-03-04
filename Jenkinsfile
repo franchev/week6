@@ -40,37 +40,49 @@ podTemplate(yaml: '''
       container('gradle') {
 	    stage("Compile") {
                steps {
-                    sh "chmod +x gradlew"
+			        sh "chmod +x gradlew"
                     sh "./gradlew compileJava"
                }
           }
           stage("Unit test") {
+		       when {
+                  expression { env.BRANCH_NAME == 'main' && env.BRANCH_NAME == 'feature'}
+               }
                steps {
                     sh "./gradlew test"
                }
           }
           stage("Code coverage") {
+		       when {
+                   expression { env.BRANCH_NAME == 'main' }
+               }
                steps {
                     sh "./gradlew jacocoTestReport"
                     sh "./gradlew jacocoTestCoverageVerification"
                }
           }
           stage("Static code analysis") {
+		       when {
+                    expression { env.BRANCH_NAME == 'main' && env.BRANCH_NAME == 'feature'}
+               }
                steps {
                     sh "./gradlew checkstyleMain"
                }
           }
-          stage("Package") {
-               steps {
-                    sh "./gradlew build"
-               }
-          }
-        stage('Build a gradle project') {
-          sh '''
-          sed -i '4 a /** Main app */' src/main/java/com/leszko/calculator/Calculator.java
-          ./gradlew build
-          mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
-          '''
+        stage('Build') {
+		  script {
+		    try {   
+                sh '''
+                sed -i '4 a /** Main app */' src/main/java/com/leszko/calculator/Calculator.java
+                ./gradlew build
+                mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
+                '''
+			} catch(err) {
+			    echo err.getMessage()
+				echo "Error while building package, will not continue to build container image. Exiting"
+				sh "exit 1"
+			}
+		  }
         }
       }
     }
@@ -78,13 +90,22 @@ podTemplate(yaml: '''
     stage('Build Java Image') {
       container('kaniko') {
         stage('Build a container') {
+		 when {
+                 expression { env.BRANCH_NAME != 'playground' }
+            }
           sh '''
           echo 'FROM openjdk:8-jre' > Dockerfile
           echo 'COPY ./calculator-0.0.1-SNAPSHOT.jar app.jar' >> Dockerfile
           echo 'ENTRYPOINT ["java", "-jar", "app.jar"]' >> Dockerfile
           ls /mnt/*jar
-          mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
-          /kaniko/executor --context `pwd` --destination franchev/hello-kaniko:1.0
+		  if (env.BRANCH_NAME == "main") {
+            mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
+            /kaniko/executor --context `pwd` --destination franchev/calculator:1.0
+		  }
+		  if (env.BRANCH_NAME == "feature") {
+		    mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
+            /kaniko/executor --context `pwd` --destination franchev/calculator:0.1
+		  }
           '''
         }
       }
