@@ -40,7 +40,8 @@ podTemplate(yaml: '''
       container('gradle') {
 	    stage("Compile") {
                steps {
-			        sh "chmod +x gradlew"
+                    sh "echo this is the playground branch"
+	            sh "chmod +x gradlew"
                     sh "./gradlew compileJava"
                }
           }
