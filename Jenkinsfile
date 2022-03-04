@@ -39,35 +39,28 @@ podTemplate(yaml: '''
     stage('Build a gradle project') {
       container('gradle') {
 	    stage("Compile") {
-               steps {
-			        sh "chmod +x gradlew"
-                    sh "./gradlew compileJava"
-               }
+                sh "echo this is the feature branch"
+	            sh "chmod +x gradlew"
+                sh "./gradlew compileJava"
           }
           stage("Unit test") {
 		       when {
                   expression { env.BRANCH_NAME == 'main' && env.BRANCH_NAME == 'feature'}
                }
-               steps {
-                    sh "./gradlew test"
-               }
+                sh "./gradlew test"
           }
           stage("Code coverage") {
 		       when {
                    expression { env.BRANCH_NAME == 'main' }
                }
-               steps {
-                    sh "./gradlew jacocoTestReport"
-                    sh "./gradlew jacocoTestCoverageVerification"
-               }
+                sh "./gradlew jacocoTestReport"
+                sh "./gradlew jacocoTestCoverageVerification"
           }
           stage("Static code analysis") {
 		       when {
                     expression { env.BRANCH_NAME == 'main' && env.BRANCH_NAME == 'feature'}
                }
-               steps {
-                    sh "./gradlew checkstyleMain"
-               }
+                sh "./gradlew checkstyleMain"
           }
         stage('Build') {
 		  script {
