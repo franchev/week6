@@ -40,7 +40,8 @@ podTemplate(yaml: '''
       container('gradle') {
 	    stage("Compile") {
                 sh "echo this is the feature branch"
-	            sh "chmod +x gradlew"
+                sh "ls -l"
+	        sh "chmod +x gradlew"
                 sh "./gradlew compileJava"
           }
           stage("Unit test") {
