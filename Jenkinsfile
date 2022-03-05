@@ -39,7 +39,7 @@ pipeline {
                   path: config.json
         '''
     }
-  }
+	}
      triggers {
           pollSCM('* * * * *')
      }
@@ -48,7 +48,7 @@ pipeline {
                steps {
 			      container('gradle') {
 				      sh """
-					  echo playground branch
+					  echo ${env.BRANCH_NAME} branch
 			          chmod +x gradlew
                       ./gradlew compileJava
 					  """
@@ -106,10 +106,10 @@ pipeline {
           }
 
           stage("Docker build") {
-               steps {
-			      when {
+		       when {
                     expression { env.BRANCH_NAME != 'playground'}
                   }
+               steps {
 			        container('kaniko') {
 					  sh '''
                         echo 'FROM openjdk:8-jre' > Dockerfile
