@@ -48,10 +48,7 @@ pipeline {
                steps {
 			      container('gradle') {
 				      sh """
-					  echo hello world
-					  #git clone https://github.com/franchev/week6.git
-					  ls -l
-					  #cd week6
+					  echo feature branch
 			          chmod +x gradlew
                       ./gradlew compileJava
 					  """
@@ -95,8 +92,6 @@ pipeline {
                      try {
 					   container('gradle') {
                         sh """
-						  ls -l
-						  #cd week6
 						  ./gradlew build
 						  mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
 						"""
