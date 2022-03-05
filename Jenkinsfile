@@ -48,7 +48,7 @@ pipeline {
                steps {
 			      container('gradle') {
 				      sh """
-					  echo feature branch
+					  echo ${env.BRANCH_NAME} branch
 			          chmod +x gradlew
                       ./gradlew compileJava
 					  """
