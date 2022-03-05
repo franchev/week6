@@ -40,9 +40,6 @@ pipeline {
         '''
     }
 	}
-     triggers {
-          pollSCM('* * * * *')
-     }
      stages {
           stage("Compile") {
                steps {
