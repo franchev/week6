@@ -1,113 +1,100 @@
-podTemplate(yaml: '''
-    apiVersion: v1
-    kind: Pod
-    spec:
-      containers:
-      - name: gradle
-        image: gradle:6.3-jdk14
-        command:
-        - sleep
-        args:
-        - 99d
-        volumeMounts:
-        - name: shared-storage
-          mountPath: /mnt        
-      - name: kaniko
-        image: gcr.io/kaniko-project/executor:debug
-        command:
-        - sleep
-        args:
-        - 9999999
-        volumeMounts:
-        - name: shared-storage
-          mountPath: /mnt
-        - name: kaniko-secret
-          mountPath: /kaniko/.docker
-      restartPolicy: Never
-      volumes:
-      - name: shared-storage
-        persistentVolumeClaim:
-          claimName: jenkins-pv-claim
-      - name: kaniko-secret
-        secret:
-            secretName: dockercred
-            items:
-            - key: .dockerconfigjson
-              path: config.json
-''') {
-  node(POD_LABEL) {
-    stage('Build a gradle project') {
-      container('gradle') {
-	    stage("Compile") {
-		        sh """
-                  echo this is the feature branch
-                  ls -l
-				  git clone https://github.com/franchev/week6.git
-				  cd week6
-	              chmod +x gradlew
-                  ./gradlew compileJava
-				"""
+pipeline {
+     agent any
+     triggers {
+          pollSCM('* * * * *')
+     }
+     stages {
+          stage("Compile") {
+               steps {
+			        sh "chmod +x gradlew"
+                    sh "./gradlew compileJava"
+               }
           }
           stage("Unit test") {
 		       when {
                   expression { env.BRANCH_NAME == 'main' && env.BRANCH_NAME == 'feature'}
                }
-                sh "./gradlew test"
+               steps {
+                    sh "./gradlew test"
+               }
           }
           stage("Code coverage") {
 		       when {
                    expression { env.BRANCH_NAME == 'main' }
                }
-                sh "./gradlew jacocoTestReport"
-                sh "./gradlew jacocoTestCoverageVerification"
+               steps {
+                    sh "./gradlew jacocoTestReport"
+                    sh "./gradlew jacocoTestCoverageVerification"
+               }
           }
           stage("Static code analysis") {
 		       when {
                     expression { env.BRANCH_NAME == 'main' && env.BRANCH_NAME == 'feature'}
                }
-                sh "./gradlew checkstyleMain"
+               steps {
+                    sh "./gradlew checkstyleMain"
+               }
           }
-        stage('Build') {
-		  script {
-		    try {   
-                sh '''
-                sed -i '4 a /** Main app */' src/main/java/com/leszko/calculator/Calculator.java
-                ./gradlew build
-                mv ./build/libs/calculator-0.0.1-SNAPSHOT.jar /mnt
-                '''
-			} catch(err) {
-			    echo err.getMessage()
-				echo "Error while building package, will not continue to build container image. Exiting"
-				sh "exit 1"
-			}
-		  }
-        }
-      }
-    }
+          stage("Package") {
+               steps {
+                    sh "./gradlew build"
+               }
+          }
 
-    stage('Build Java Image') {
-      container('kaniko') {
-        stage('Build a container') {
-		 when {
-                 expression { env.BRANCH_NAME != 'playground' }
-            }
-          sh '''
-          echo 'FROM openjdk:8-jre' > Dockerfile
-          echo 'COPY ./calculator-0.0.1-SNAPSHOT.jar app.jar' >> Dockerfile
-          echo 'ENTRYPOINT ["java", "-jar", "app.jar"]' >> Dockerfile
-          ls /mnt/*jar
-		  if (env.BRANCH_NAME == "main") {
-            mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
-            /kaniko/executor --context `pwd` --destination franchev/calculator:1.0
-		  }
-		  if (env.BRANCH_NAME == "feature") {
-		    mv /mnt/calculator-0.0.1-SNAPSHOT.jar .
-            /kaniko/executor --context `pwd` --destination franchev/calculator:0.1
-		  }
-          '''
-        }
-      }
-    }
+          stage("Docker build") {
+               steps {
+                    sh "docker build -t leszko/calculator:${BUILD_TIMESTAMP} ."
+               }
+          }
 
-  }
+          stage("Docker login") {
+               steps {
+                    withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'docker-hub-credentials',
+                               usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD']]) {
+                         sh "docker login --username $USERNAME --password $PASSWORD"
+                    }
+               }
+          }
+
+          stage("Docker push") {
+               steps {
+                    sh "docker push leszko/calculator:${BUILD_TIMESTAMP}"
+               }
+          }
+
+          stage("Update version") {
+               steps {
+                    sh "sed  -i 's/{{VERSION}}/${BUILD_TIMESTAMP}/g' calculator.yaml"
+               }
+          }
+		  
+          /*stage("Deploy to staging") {
+               steps {
+                    sh "kubectl config use-context staging"
+                    sh "kubectl apply -f hazelcast.yaml"
+                    sh "kubectl apply -f calculator.yaml"
+               }
+          }
+
+          stage("Acceptance test") {
+               steps {
+                    sleep 60
+                    sh "chmod +x acceptance-test.sh && ./acceptance-test.sh"
+               }
+          }
+
+          stage("Release") {
+               steps {
+                    sh "kubectl config use-context production"
+                    sh "kubectl apply -f hazelcast.yaml"
+                    sh "kubectl apply -f calculator.yaml"
+               }
+          }
+          stage("Smoke test") {
+              steps {
+                  sleep 60
+                  sh "chmod +x smoke-test.sh && ./smoke-test.sh"
+              }
+          } */
+     }
 }
