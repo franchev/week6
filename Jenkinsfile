@@ -55,7 +55,7 @@ pipeline {
           }
           stage("Unit test") {
 		       when {
-                  expression { env.BRANCH_NAME == 'main' && env.BRANCH_NAME == 'feature'}
+                  expression { env.BRANCH_NAME != 'playground'}
                }
                steps {
 			     container('gradle') {
@@ -76,7 +76,7 @@ pipeline {
           }
           stage("Static code analysis") {
 		       when {
-                    expression { env.BRANCH_NAME == 'main' && env.BRANCH_NAME == 'feature'}
+                    expression { env.BRANCH_NAME != 'playground'}
                }
                steps {
 			     container('gradle') {
