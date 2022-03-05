@@ -107,6 +107,9 @@ pipeline {
 
           stage("Docker build") {
                steps {
+			       when {
+                    expression { env.BRANCH_NAME != 'playground'}
+                  }
 			        container('kaniko') {
 					  sh '''
                         echo 'FROM openjdk:8-jre' > Dockerfile
